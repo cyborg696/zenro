@@ -46,11 +46,12 @@ The site is plain **HTML, CSS and JavaScript**: no framework, no build step. It 
 ├── images/
 │   ├── products/<brand>/<model>/   optimised product photos (WebP)
 │   ├── raw/                        your original photos (never published, see .gitignore)
-│   ├── hero-watch.svg, favicon.svg, og-image.svg, og-image.jpg
+│   ├── hero-watch.webp, favicon.svg, og-image.svg, og-image.jpg
 ├── tools/
 │   ├── optimise-images.mjs     prepares product photos
 │   ├── stamp.mjs               rewrites the shared head/header/footer on every page, sitemap.xml and robots.txt
-│   └── generate-images.mjs     rebuilds the hero (also the live hero watch inlined in index.html), favicon and sharing image
+│   ├── generate-hero.mjs       rebuilds the hero watch (images/hero-watch.webp plus the live hands inlined in index.html)
+│   └── generate-images.mjs     rebuilds the favicon and sharing image
 └── docs/PAYMENT_GATEWAY.md     payments now, and how to add online payments later
 ```
 

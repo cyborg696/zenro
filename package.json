@@ -8,6 +8,7 @@
     "images": "node tools/optimise-images.mjs",
     "og-image": "node tools/optimise-images.mjs --og",
     "generate": "node tools/generate-images.mjs",
+    "hero": "node tools/generate-hero.mjs",
     "test": "node tools/test-demo.mjs"
   },
   "devDependencies": {

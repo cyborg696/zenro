@@ -4,11 +4,12 @@
 (() => {
   const { el } = ZW;
 
-  /* ---------- Hero watch: live Bangladesh time ----------
+  /* ---------- Hero watch: live Bangladesh time and date ----------
    * Bangladesh Standard Time is UTC+6 all year (no daylight saving), so the time is worked out
    * from UTC directly and does not depend on the visitor's own time zone. The second hand sweeps
    * smoothly; with "reduce motion" switched on it ticks once a second instead. */
   const watchHands = ['hour', 'minute', 'second'].map((k) => document.getElementById(`hw-${k}`));
+  const watchDate = document.getElementById('hw-date');
   if (watchHands.every(Boolean)) {
     const BST_OFFSET_MS = 6 * 60 * 60 * 1000;
     // Keep each hand's translate(...) and replace only its rotate(...)
@@ -23,6 +24,9 @@
       [hour * 30, min * 6, sec * 6].forEach((deg, i) => {
         watchHands[i].setAttribute('transform', `${bases[i]} rotate(${deg.toFixed(2)})`);
       });
+      // Date window: today's day of the month in Bangladesh
+      const day = String(t.getUTCDate());
+      if (watchDate && watchDate.textContent !== day) watchDate.textContent = day;
     };
 
     // Smooth sweep only while the hero is on screen; otherwise once a second is plenty.

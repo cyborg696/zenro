@@ -94,7 +94,7 @@ const social = (cls) => `<ul class="${cls}" aria-label="ZENRO on social media">
 const PAGES = [
   { file: 'index.html', current: 'home', title: 'ZENRO Wrist & Co. | Watches with Cash on Delivery all over Bangladesh',
     desc: 'ZENRO Wrist & Co. sells watches online from Chandpur, Bangladesh. Cash on Delivery all over Bangladesh, bKash, Nagad, Rocket or bank transfer, and easy ordering on WhatsApp.',
-    scripts: ['js/seo.js', 'js/home.js'] }, // the hero watch is inline (see tools/generate-images.mjs)
+    scripts: ['js/seo.js', 'js/home.js'], preload: 'images/hero-watch.webp' }, // hero watch: see tools/generate-hero.mjs
   { file: 'shop.html', current: 'shop', title: 'The Collection | ZENRO Wrist & Co.',
     desc: 'Browse watches by brand and model at ZENRO Wrist & Co. Prices in Taka, Cash on Delivery all over Bangladesh.',
     scripts: ['js/shop.js'] },
@@ -163,7 +163,7 @@ ${page.noindex || DEMO_MODE ? '  <meta name="robots" content="noindex">\n' : ''}
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap">
   <link rel="stylesheet" href="css/styles.css">
-${page.preload ? `  <link rel="preload" as="image" href="${page.preload}" type="image/svg+xml">\n` : ''}${scripts}
+${page.preload ? `  <link rel="preload" as="image" href="${page.preload}" fetchpriority="high">\n` : ''}${scripts}
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>

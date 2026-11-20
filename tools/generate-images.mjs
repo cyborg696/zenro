@@ -6,17 +6,14 @@
  *
  *   node tools/generate-images.mjs
  *
- * Output: images/hero-watch.svg  (home page hero, generic wristwatch illustration)
- *         index.html             the same hero watch, inlined between the
- *                                <!-- hero-watch:start --> / <!-- hero-watch:end --> markers so
- *                                js/home.js can turn its hands to the live Bangladesh time
- *         images/favicon.svg     ("ZW" monogram)
+ * Output: images/favicon.svg     ("ZW" monogram)
  *         images/og-image.svg    (social sharing card; convert to JPG with
  *                                 node tools/optimise-images.mjs --og)
  *
+ * The home page hero watch is built by tools/generate-hero.mjs.
  * Product photos are real photos, prepared with tools/optimise-images.mjs.
  */
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -347,10 +344,9 @@ function hands(p, cx, cy, r) {
   const S = 216;
   const lume = p.lumeHands ? p.lume : null;
   let out = `<g filter="url(#handShadow)">`;
-  const id = (name) => (p.live ? ` id="${name}"` : ''); // the hero's hands are turned by js/home.js
-  out += `<g${id('hour')} transform="translate(${cx} ${cy}) rotate(${n(H)})">${handShape(p.hands, r * 0.56, r * 0.075, lume)}</g>`;
-  out += `<g${id('minute')} transform="translate(${cx} ${cy}) rotate(${n(M)})">${handShape(p.hands, r * 0.84, r * 0.06, lume)}</g>`;
-  out += `<g${id('second')} transform="translate(${cx} ${cy}) rotate(${S})"><rect x="-1.4" y="${n(-r * 0.9)}" width="2.8" height="${n(r * 1.12)}" rx="1.4" fill="${p.accent}"/>`;
+  out += `<g transform="translate(${cx} ${cy}) rotate(${n(H)})">${handShape(p.hands, r * 0.56, r * 0.075, lume)}</g>`;
+  out += `<g transform="translate(${cx} ${cy}) rotate(${n(M)})">${handShape(p.hands, r * 0.84, r * 0.06, lume)}</g>`;
+  out += `<g transform="translate(${cx} ${cy}) rotate(${S})"><rect x="-1.4" y="${n(-r * 0.9)}" width="2.8" height="${n(r * 1.12)}" rx="1.4" fill="${p.accent}"/>`;
   if (p.type === 'diver') out += `<circle cx="0" cy="${n(-r * 0.68)}" r="${n(r * 0.045)}" fill="${p.lume}" stroke="${p.accent}" stroke-width="3"/>`;
   out += `<circle cx="0" cy="${n(r * 0.16)}" r="${n(r * 0.03)}" fill="${p.accent}"/></g>`;
   out += `<circle cx="${cx}" cy="${cy}" r="${n(r * 0.045)}" fill="url(#metal)" stroke="#000" stroke-opacity="0.4"/><circle cx="${cx}" cy="${cy}" r="${n(r * 0.016)}" fill="#222"/>`;
@@ -408,18 +404,7 @@ function watch(p, cx, cy, R, yMin, yMax) {
   return { defs: watchDefs(p, cx, cy, r), body };
 }
 
-/* ---------- the one generic watch used in the hero ----------
- * Rose-gold dress watch: ivory guilloché dial, Roman numerals, dauphine hands, brown leather.
- * No date window, because it would sit on top of the "III". */
-const HERO_WATCH = {
-  type: 'dress', metal: 'rose', dial: ['#fdf8ef', '#e4d8c4'], texture: 'guilloche', plain: true,
-  indices: 'roman', hands: 'dauphine', ink: '#3b2a20', accent: '#9a5638', date: false,
-  handColors: ['#f0b89b', '#7c412b'], halo: '#d9a08a',
-  strap: { kind: 'leather', color: ['#6e4429', '#3a2214'], stitch: '#efe2c8' },
-};
-
-/* The sharing image keeps the earlier gold-and-black watch so link previews still match
- * images/og-image.jpg. Point ogImageSvg() at HERO_WATCH and rebuild the JPG to change it. */
+/* ---------- the generic watch on the sharing image (images/og-image.jpg) ---------- */
 const OG_WATCH = {
   type: 'dress', metal: 'gold', dial: ['#2a2723', '#050505'], texture: 'sunburst', plain: true,
   indices: 'baton', hands: 'dauphine', ink: '#e9d9a8', accent: '#d8b86e', date: true,
@@ -427,24 +412,6 @@ const OG_WATCH = {
 };
 
 /* ---------- writers ---------- */
-function heroSvg({ live = false } = {}) {
-  const p = { ...HERO_WATCH, live };
-  const S = 1200;
-  const cx = 600;
-  const cy = 600;
-  const R = 330;
-  const w = watch(p, cx, cy, R, -700, S + 700);
-  const open = live
-    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" class="hero__watch" role="img" aria-label="Watch showing the current time in Bangladesh">`
-    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img">`;
-  return `${open}
-<defs>${w.defs}<radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${p.halo}" stop-opacity="0.35"/><stop offset="1" stop-color="${p.halo}" stop-opacity="0"/></radialGradient></defs>
-<circle cx="${cx}" cy="${cy}" r="560" fill="url(#halo)"/>
-<g transform="rotate(-16 ${cx} ${cy})">${w.body}</g>
-</svg>
-`;
-}
-
 function faviconSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
 <rect width="64" height="64" rx="14" fill="#0b0b0b"/>
@@ -469,18 +436,6 @@ function ogImageSvg() {
 `;
 }
 
-writeFileSync(join(OUT, 'hero-watch.svg'), heroSvg());
-
-/* Inline live copy in index.html. Every id gets an "hw-" prefix so it cannot clash with the page. */
-const inline = heroSvg({ live: true })
-  .trim()
-  .replace(/\bid="([^"]+)"/g, 'id="hw-$1"')
-  .replace(/url\(#([^)]+)\)/g, 'url(#hw-$1)');
-const indexFile = join(ROOT, 'index.html');
-const indexHtml = readFileSync(indexFile, 'utf8');
-const markers = /(<!-- hero-watch:start -->)[\s\S]*?(<!-- hero-watch:end -->)/;
-if (!markers.test(indexHtml)) throw new Error('index.html: hero-watch markers not found');
-writeFileSync(indexFile, indexHtml.replace(markers, (m, a, b) => `${a}\n${inline}\n        ${b}`));
 writeFileSync(join(OUT, 'favicon.svg'), faviconSvg());
 writeFileSync(join(OUT, 'og-image.svg'), ogImageSvg());
-console.log(`Generated 3 images in ${OUT} and the live hero watch in index.html`);
+console.log(`Generated 2 images in ${OUT}`);
