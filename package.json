@@ -1,0 +1,15 @@
+{
+  "name": "zenro-wrist-store",
+  "private": true,
+  "type": "module",
+  "description": "ZENRO Wrist & Co. static storefront. Node is only needed for the image tools; the site itself has no build step.",
+  "scripts": {
+    "stamp": "node tools/stamp.mjs",
+    "images": "node tools/optimise-images.mjs",
+    "og-image": "node tools/optimise-images.mjs --og",
+    "generate": "node tools/generate-images.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.0"
+  }
+}
