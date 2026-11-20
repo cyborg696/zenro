@@ -15,7 +15,7 @@
 
   const { el, Cart, setFieldError } = ZW;
   const O = ZWOrder;
-  const CFG = STORE_CONFIG;
+  const CFG = ZW.CFG;
   const ORDER_ID_KEY = 'zw-checkout-order-id';
   const LAST_ORDER_AT_KEY = 'zw-last-order-at';
   const RATE_LIMIT_MS = 30000;
@@ -137,7 +137,9 @@
   let zoneTouched = false;
   form.querySelectorAll('[data-zone-charge]').forEach((span) => {
     const charge = ZW.deliveryCharge(span.dataset.zoneCharge);
-    span.textContent = charge !== null ? `Delivery charge ${formatBDT(charge)}` : 'Delivery charge confirmed on WhatsApp';
+    span.replaceChildren(...(charge !== null
+      ? ZW.amount(`Delivery charge ${formatBDT(charge)}`, ZW.isDemoDelivery(span.dataset.zoneCharge))
+      : ['Delivery charge confirmed on WhatsApp']));
   });
 
   inputs.district.addEventListener('change', () => {
@@ -167,15 +169,24 @@
   }
 
   /* ---------- Payment panel ---------- */
-  function mobileInstructions(m, amount, note) {
+  /** "Demo number. Do not send money." under a demo payment number (demo mode only). */
+  function demoPaymentNote() {
+    return el('p', { class: 'pay-box__demo', text: DEMO.PAYMENT_NOTE });
+  }
+
+  function mobileInstructions(m, amount, note, demoAmount) {
     const action = m.accountType === 'Merchant' ? 'Payment' : 'Send Money';
-    const copyBtn = el('button', { type: 'button', class: 'btn-copy', 'aria-label': `Copy ${m.name} number ${m.number}`, text: 'Copy number' });
-    copyBtn.addEventListener('click', () => copyText(m.number));
+    let copyBtn = null; // no Copy button for a demo number
+    if (!m.demo) {
+      copyBtn = el('button', { type: 'button', class: 'btn-copy', 'aria-label': `Copy ${m.name} number ${m.number}`, text: 'Copy number' });
+      copyBtn.addEventListener('click', () => copyText(m.number));
+    }
     return el('div', { class: `pay-box pay-box--${m.key}` }, [
       el('p', { class: 'pay-box__title' }, [el('span', { class: `pay-name pay-name--${m.key}`, text: m.name }), ` ${m.accountType} number`]),
       el('p', { class: 'pay-box__number' }, [el('span', { class: 'mono', text: m.number }), copyBtn]),
+      m.demo ? demoPaymentNote() : null,
       el('p', { class: 'pay-box__hint', text: `This is a ${m.accountType.toLowerCase()} account, so use “${action}”.` }),
-      el('p', { class: 'pay-box__amount' }, ['Amount to pay: ', el('strong', { text: formatBDT(amount) })]),
+      el('p', { class: 'pay-box__amount' }, ['Amount to pay: ', el('strong', {}, ZW.amount(formatBDT(amount), demoAmount))]),
       note ? el('p', { class: 'pay-box__hint', text: note }) : null,
       el('ol', { class: 'pay-steps' }, [
         el('li', { text: `Open the ${m.name} app.` }),
@@ -189,18 +200,21 @@
     ]);
   }
 
-  function bankInstructions(b, amount, note) {
+  function bankInstructions(b, amount, note, demoAmount) {
     const rows = [
       ['Bank', b.bankName], ['Account name', b.accountName], ['Account number', b.accountNumber],
       ['Branch', b.branch], ['Routing number', b.routingNumber], ['Reference', orderId()],
     ].filter(([, v]) => v);
-    const copyBtn = el('button', { type: 'button', class: 'btn-copy', 'aria-label': `Copy account number ${b.accountNumber}`, text: 'Copy account number' });
-    copyBtn.addEventListener('click', () => copyText(b.accountNumber));
+    let copyBtn = null; // no Copy button for demo bank details
+    if (!b.demo) {
+      copyBtn = el('button', { type: 'button', class: 'btn-copy', 'aria-label': `Copy account number ${b.accountNumber}`, text: 'Copy account number' });
+      copyBtn.addEventListener('click', () => copyText(b.accountNumber));
+    }
     return el('div', { class: 'pay-box' }, [
       el('p', { class: 'pay-box__title', text: 'Bank transfer details' }),
       el('dl', { class: 'info-list info-list--compact' }, rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { class: k.includes('number') || k === 'Reference' ? 'mono' : null, text: v })])),
-      copyBtn,
-      el('p', { class: 'pay-box__amount' }, ['Amount to pay: ', el('strong', { text: formatBDT(amount) })]),
+      b.demo ? demoPaymentNote() : copyBtn,
+      el('p', { class: 'pay-box__amount' }, ['Amount to pay: ', el('strong', {}, ZW.amount(formatBDT(amount), demoAmount))]),
       note ? el('p', { class: 'pay-box__hint', text: note }) : null,
       el('p', { class: 'pay-box__hint', text: 'After paying, enter the depositor name and reference below, and send a photo of the deposit slip to us on WhatsApp.' }),
     ]);
@@ -227,17 +241,17 @@
         advanceIntro.textContent = `Cash on Delivery needs an advance of ${formatBDT(adv.amount)}. Pay it now, then pay the rest (${formatBDT(Math.max(0, t.total - adv.amount))}) to the courier.`;
         const adm = getAdvanceMethod();
         if (adm) {
-          panel.push(mobileInstructions(O.mobileMethod(adm), adv.amount, null));
+          panel.push(mobileInstructions(O.mobileMethod(adm), adv.amount, null, ZW.isDemoDelivery(zone) || ZW.isDemoValue('cod.advanceRequired')));
           showMobile = true;
         }
       } else {
         panel.push(el('p', { text: 'Cash on Delivery needs a small advance payment. We will contact you on WhatsApp to arrange it.' }));
       }
     } else if (O.MOBILE_METHODS.includes(method)) {
-      panel.push(mobileInstructions(O.mobileMethod(method), t.total, deliveryNote));
+      panel.push(mobileInstructions(O.mobileMethod(method), t.total, deliveryNote, t.demoTotal));
       showMobile = true;
     } else if (method === 'bank') {
-      panel.push(bankInstructions(O.bankDetails(), t.total, deliveryNote));
+      panel.push(bankInstructions(O.bankDetails(), t.total, deliveryNote, t.demoTotal));
       showBank = true;
     }
 
@@ -268,19 +282,19 @@
     const method = getMethod();
     const t = O.totals(items, zone);
     const rows = [
-      el('dt', { text: 'Subtotal' }), el('dd', { text: formatBDT(t.subtotal) }),
+      el('dt', { text: 'Subtotal' }), el('dd', {}, ZW.amount(formatBDT(t.subtotal), t.demoPrices)),
       el('dt', { text: zone ? `Delivery (${O.ZONES[zone]})` : 'Delivery' }),
-      el('dd', { text: !zone ? 'Choose a zone' : t.delivery === null ? 'Confirmed on WhatsApp' : formatBDT(t.delivery) }),
+      el('dd', {}, !zone ? 'Choose a zone' : t.delivery === null ? 'Confirmed on WhatsApp' : ZW.amount(formatBDT(t.delivery), t.demoDelivery)),
       el('dt', { class: 'summary__total', text: 'Total' }),
-      el('dd', { class: 'summary__total', text: `${formatBDT(t.total)}${zone && t.delivery !== null ? '' : ' + delivery'}` }),
+      el('dd', { class: 'summary__total' }, ZW.amount(`${formatBDT(t.total)}${zone && t.delivery !== null ? '' : ' + delivery'}`, t.demoTotal)),
     ];
     if (method) {
       const due = O.amountDue(method, zone, items);
       if (method === 'cod') {
-        if (due) rows.push(el('dt', { text: 'Advance to pay now' }), el('dd', { text: formatBDT(due) }));
-        rows.push(el('dt', { text: 'Pay on delivery' }), el('dd', { text: formatBDT(Math.max(0, t.total - (due || 0))) }));
+        if (due) rows.push(el('dt', { text: 'Advance to pay now' }), el('dd', {}, ZW.amount(formatBDT(due), t.demoDelivery)));
+        rows.push(el('dt', { text: 'Pay on delivery' }), el('dd', {}, ZW.amount(formatBDT(Math.max(0, t.total - (due || 0))), t.demoTotal)));
       } else if (due) {
-        rows.push(el('dt', { text: `Pay now by ${O.METHOD_NAMES[method]}` }), el('dd', { text: formatBDT(due) }));
+        rows.push(el('dt', { text: `Pay now by ${O.METHOD_NAMES[method]}` }), el('dd', {}, ZW.amount(formatBDT(due), t.demoTotal)));
       }
     }
     summaryEl.replaceChildren(
@@ -288,7 +302,7 @@
       el('ul', { class: 'summary__items' }, t.lines.map((l) =>
         el('li', {}, [
           el('span', { text: `${l.product.name} × ${l.qty}` }),
-          el('span', { text: formatBDT(l.total) }),
+          el('span', {}, ZW.amount(formatBDT(l.total), isDemoPrice(l.product))),
         ]))),
       el('dl', {}, rows),
       el('a', { class: 'btn-text', href: 'cart.html', text: 'Edit cart' }),
@@ -403,7 +417,7 @@
         el('h3', { text: title }),
         step ? el('button', { type: 'button', class: 'btn-text', 'data-edit': step, 'aria-label': `Edit ${title.toLowerCase()}`, text: 'Edit' }) : null,
       ]),
-      rows.length ? el('dl', { class: 'info-list info-list--compact' }, rows.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })])) : null,
+      rows.length ? el('dl', { class: 'info-list info-list--compact' }, rows.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', { text: k }), el('dd', {}, v)])) : null,
       extra || null,
     ]);
   }
@@ -419,14 +433,14 @@
     const adv = getAdvanceMethod();
 
     const paymentRows = [['Method', method ? O.METHOD_NAMES[method] : '']];
-    if (method === 'cod' && required.includes('advanceMethod')) paymentRows.push(['Advance', `${formatBDT(due)} by ${O.METHOD_NAMES[adv] || ''}`]);
-    if (method && method !== 'cod' && due) paymentRows.push(['Amount', formatBDT(due)]);
+    if (method === 'cod' && required.includes('advanceMethod')) paymentRows.push(['Advance', ZW.amount(`${formatBDT(due)} by ${O.METHOD_NAMES[adv] || ''}`, t.demoDelivery)]);
+    if (method && method !== 'cod' && due) paymentRows.push(['Amount', ZW.amount(formatBDT(due), t.demoTotal)]);
     if (required.includes('sender')) paymentRows.push(['Sender number', v('sender')], ['TrxID', v('trxId')]);
     if (required.includes('depositor')) paymentRows.push(['Depositor', v('depositor')], ['Reference', v('bankRef')]);
     paymentRows.push(['Order reference', orderId()]);
 
     const itemList = el('ul', { class: 'summary__items' }, t.lines.map((l) =>
-      el('li', {}, [el('span', { text: `${l.product.name}${isSet(l.product.variant) ? ` (${l.product.variant})` : ''} × ${l.qty}` }), el('span', { text: formatBDT(l.total) })])));
+      el('li', {}, [el('span', { text: `${l.product.name}${isSet(l.product.variant) ? ` (${l.product.variant})` : ''} × ${l.qty}` }), el('span', {}, ZW.amount(formatBDT(l.total), isDemoPrice(l.product)))])));
 
     review.replaceChildren(
       reviewBlock('Items', 0, [], el('div', {}, [itemList, el('a', { class: 'btn-text', href: 'cart.html', text: 'Edit cart' })])),
@@ -436,8 +450,8 @@
       ]),
       reviewBlock('Delivery zone', 2, [
         ['Zone', zone ? O.ZONES[zone] : ''],
-        ['Delivery charge', t.delivery === null ? 'Confirmed on WhatsApp' : formatBDT(t.delivery)],
-        ['Total', `${formatBDT(t.total)}${t.delivery === null ? ' + delivery' : ''}`],
+        ['Delivery charge', t.delivery === null ? 'Confirmed on WhatsApp' : ZW.amount(formatBDT(t.delivery), t.demoDelivery)],
+        ['Total', ZW.amount(`${formatBDT(t.total)}${t.delivery === null ? ' + delivery' : ''}`, t.demoTotal)],
       ]),
       reviewBlock('Payment', 3, paymentRows)
     );

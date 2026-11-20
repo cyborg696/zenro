@@ -7,10 +7,12 @@
 'use strict';
 
 const ZWOrder = (() => {
-  const CFG = STORE_CONFIG;
+  const CFG = ZW.CFG; // STORE_CONFIG, with demo samples filled in while demo mode is on
   const { sanitizeLine, sanitizeMultiline, sanitizeEmail, isValidEmail, normalizeBDMobile, isValidBDMobile } = ZW;
 
-  const ORDER_ID_RE = /^ZW-\d{6}-[A-HJ-NP-Z2-9]{4}$/;
+  // Demo orders are ZW-DEMO-YYMMDD-XXXX, and are only accepted while demo mode is on.
+  const ORDER_PREFIX = ZW.IS_DEMO ? DEMO.ORDER_PREFIX : 'ZW-';
+  const ORDER_ID_RE = ZW.IS_DEMO ? /^ZW-DEMO-\d{6}-[A-HJ-NP-Z2-9]{4}$/ : /^ZW-\d{6}-[A-HJ-NP-Z2-9]{4}$/;
   const TRXID_RE = /^[A-Z0-9]{6,20}$/;
   const BANKREF_RE = /^[A-Z0-9/-]{4,30}$/;
   const NAME_RE = /^[\p{L}\p{M}][\p{L}\p{M} '’.-]*$/u;
@@ -30,7 +32,7 @@ const ZWOrder = (() => {
     const ymd = `${String(date.getFullYear()).slice(2)}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 32 characters, no 0/O or 1/I
     const bytes = crypto.getRandomValues(new Uint8Array(4));
-    return `ZW-${ymd}-${[...bytes].map((b) => alphabet[b % alphabet.length]).join('')}`;
+    return `${ORDER_PREFIX}${ymd}-${[...bytes].map((b) => alphabet[b % alphabet.length]).join('')}`;
   }
 
   /* ---------- Payment methods from config ---------- */
@@ -38,16 +40,21 @@ const ZWOrder = (() => {
   function mobileMethod(key) {
     const m = CFG.payments[key];
     if (!MOBILE_METHODS.includes(key) || !m || m.enabled !== true) return null;
-    const number = normalizeBDMobile(m.number);
-    if (!isValidBDMobile(number) || !['Merchant', 'Personal'].includes(m.accountType)) return null;
-    return { key, name: METHOD_NAMES[key], number, accountType: m.accountType };
+    // Demo mode: the placeholder number 01XXXXXXXXX is shown as is, marked as a demo number.
+    const demo = ZW.isDemoValue(`payments.${key}`);
+    const number = demo ? m.number : normalizeBDMobile(m.number);
+    if ((!demo && !isValidBDMobile(number)) || !['Merchant', 'Personal'].includes(m.accountType)) return null;
+    return { key, name: METHOD_NAMES[key], number, accountType: m.accountType, demo };
   }
 
   function bankDetails() {
     const b = CFG.payments.bank;
     if (!b || b.enabled !== true || ![b.bankName, b.accountName, b.accountNumber].every(isSet)) return null;
     const line = (v) => (isSet(v) ? sanitizeLine(v, 120) : null);
-    return { bankName: line(b.bankName), accountName: line(b.accountName), accountNumber: line(b.accountNumber), branch: line(b.branch), routingNumber: line(b.routingNumber) };
+    return {
+      bankName: line(b.bankName), accountName: line(b.accountName), accountNumber: line(b.accountNumber), branch: line(b.branch), routingNumber: line(b.routingNumber),
+      demo: ZW.isDemoValue('payments.bank'),
+    };
   }
 
   function availableMethods() {
@@ -92,7 +99,10 @@ const ZWOrder = (() => {
     const lines = lineItems(items);
     const subtotal = lines.reduce((s, l) => s + l.total, 0);
     const delivery = ZONES[zone] ? ZW.deliveryCharge(zone) : null;
-    return { lines, subtotal, delivery, total: subtotal + (delivery || 0) };
+    // Demo flags: show the "Sample" tag next to amounts built from demo prices or charges.
+    const demoPrices = lines.some((l) => isDemoPrice(l.product));
+    const demoDelivery = delivery !== null && ZW.isDemoDelivery(zone);
+    return { lines, subtotal, delivery, total: subtotal + (delivery || 0), demoPrices, demoDelivery, demoTotal: demoPrices || demoDelivery };
   }
 
   /** What the customer pays before delivery for a given method. null = nothing / not known. */
@@ -252,6 +262,7 @@ const ZWOrder = (() => {
     const c = order.customer;
     const p = order.payment;
     const lines = [
+      ZW.IS_DEMO ? DEMO.WHATSAPP_HEADER : null,
       `*New order ${order.id}*`,
       `Date: ${formatDate(order.createdAt)}`,
       '',

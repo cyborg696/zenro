@@ -20,6 +20,10 @@
  *  - crops it to 4:5 (or pads it with --contain)
  *  - writes images/products/<brand>/<model>/<product-id>-<n>.webp      (1200 x 1500)
  *    and    images/products/<brand>/<model>/<product-id>-<n>-600.webp  (600 x 750)
+ *  - never enlarges a photo. When the source is too small for 1200 x 1500 (for example a
+ *    640 px Instagram image), the large file is written at the biggest 4:5 size the source
+ *    allows and its name records that width: <product-id>-<n>-w640.webp. productImageSet()
+ *    in js/products.js reads that width for the srcset.
  * and finally prints the `images: [...]` lines to paste into js/products.js.
  *
  * images/raw/ is listed in .gitignore so the originals (which may contain location data)
@@ -102,16 +106,31 @@ for (const file of files) {
   const folder = join(OUT, product.brand, product.model);
   mkdirSync(folder, { recursive: true });
 
+  // Never enlarge: `grow` is how much the photo would have to be scaled up to fill (cover)
+  // or fit (contain) the box. Above 1 the box shrinks instead, keeping an exact 4:5 shape.
+  const meta = await sharp(file).metadata();
+  const turned = (meta.orientation || 1) >= 5;
+  const srcW = turned ? meta.height : meta.width;
+  const srcH = turned ? meta.width : meta.height;
+  let largeName = `${id}-${n}`;
   for (const size of SIZES) {
-    const dest = join(folder, `${id}-${n}${size.suffix}.webp`);
+    let { width, height } = size;
+    const grow = (FIT === 'contain' ? Math.min : Math.max)(width / srcW, height / srcH);
+    if (grow > 1) {
+      width = Math.floor(width / grow / 4) * 4;
+      height = (width / 4) * 5;
+      if (size.suffix === '') largeName = `${id}-${n}-w${width}`;
+      else console.warn(`  ${relative(ROOT, file)} is small: its ${size.suffix} file is only ${width} px wide`);
+    }
+    const dest = join(folder, `${largeName}${size.suffix}.webp`);
     await sharp(file)
       .rotate() // apply the camera orientation before the metadata is dropped
-      .resize(size.width, size.height, { fit: FIT, position: 'centre', background: BACKGROUND })
+      .resize(width, height, { fit: FIT, position: 'centre', background: BACKGROUND })
       .flatten({ background: BACKGROUND })
       .webp({ quality: 80, effort: 5 })
       .toFile(dest); // sharp writes no EXIF/GPS/ICC metadata unless asked to
   }
-  const publicPath = `images/products/${product.brand}/${product.model}/${id}-${n}.webp`;
+  const publicPath = `images/products/${product.brand}/${product.model}/${largeName}.webp`;
   results.set(id, [...(results.get(id) || []), publicPath]);
   console.log(`✓ ${relative(ROOT, file)} -> ${publicPath} (+ -600 version)`);
 }
@@ -119,7 +138,8 @@ for (const file of files) {
 if (results.size) {
   console.log('\nPaste these lines into js/products.js (replace the existing images line of each product):\n');
   for (const [id, paths] of results) {
-    const sorted = paths.sort((a, b) => Number(a.match(/-(\d+)\.webp$/)[1]) - Number(b.match(/-(\d+)\.webp$/)[1]));
+    const photoNo = (p) => Number(p.match(/-(\d+)(?:-w\d+)?\.webp$/)[1]);
+    const sorted = paths.sort((a, b) => photoNo(a) - photoNo(b));
     console.log(`  // ${id}\n  images: [${sorted.map((p) => `'${p}'`).join(', ')}],\n`);
   }
 }

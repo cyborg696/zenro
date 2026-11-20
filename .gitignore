@@ -2,3 +2,4 @@ node_modules/
 images/raw/
 .DS_Store
 Thumbs.db
+images/raw-unused/

@@ -72,7 +72,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: false,
     condition: 'TODO_OWNER',
-    images: [],
+    images: ['images/products/rolex/datejust/rolex-datejust-collection-1-w640.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/Dfjmsn1h0DN/',
     description: 'The Datejust in a range of dial colours. Ask us on WhatsApp which colours are available.',
     specs: { ...NO_SPECS },
@@ -88,7 +88,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: false,
     condition: 'TODO_OWNER',
-    images: [],
+    images: ['images/products/rolex/day-date/rolex-day-date-stone-01-1-w640.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/Dfj4a8kmueR/',
     description: 'The Day-Date in a stone-set edition.',
     specs: { ...NO_SPECS },
@@ -136,7 +136,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: true,
     condition: 'TODO_OWNER',
-    images: [],
+    images: ['images/products/patek-philippe/grand-complications/patek-philippe-grand-complications-01-1-w640.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/DfeP9FeGtnO/',
     description:
       'A black guilloché dial with rose gold markers, a 24-hour day/night subdial, a small seconds subdial and two open-heart apertures. The rose gold finished case has a Clous de Paris bezel and sits on a black croc-embossed leather strap with contrast stitching.',
@@ -174,7 +174,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: true,
     condition: 'TODO_OWNER',
-    images: [],
+    images: ['images/products/jacob-and-co/godfather/jacob-and-co-godfather-01-1-w640.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/DfmsaP_mvai/',
     description: 'The Godfather in an all-black theme.',
     specs: { ...NO_SPECS },
@@ -204,10 +204,26 @@ function isSet(value) {
   return true;
 }
 
-/** Price as a whole positive number of Taka, or null. */
-function priceOf(product) {
+/** The real price set in PRODUCTS: a whole positive number of Taka, or null. */
+function realPriceOf(product) {
   const p = product && product.price;
   return Number.isInteger(p) && p > 0 ? p : null;
+}
+
+/** Sample price from js/demo-data.js, only in demo mode and only when no real price is set. */
+function demoPriceOf(product) {
+  if (!product || realPriceOf(product) !== null || typeof DEMO === 'undefined' || !DEMO.active) return null;
+  return DEMO.price(product.id);
+}
+
+/** Price as a whole positive number of Taka, or null. A real price always wins over a sample price. */
+function priceOf(product) {
+  return realPriceOf(product) ?? demoPriceOf(product);
+}
+
+/** True when the price shown for a product is a demo sample (show the "Sample" tag, skip JSON-LD offers). */
+function isDemoPrice(product) {
+  return demoPriceOf(product) !== null;
 }
 
 /** ৳1,25,000 style (Indian/Bangladeshi lakh grouping, no decimals). Returns '' for missing values. */
@@ -256,10 +272,13 @@ function productImages(product) {
   return (product.images || []).filter((src) => typeof src === 'string' && PRODUCT_IMAGE_RE.test(src));
 }
 
-/** src + srcset for one product photo (the 600px file sits next to the 1200px one as <name>-600.webp). */
+/** src + srcset for one product photo (the 600px file sits next to the large one as <name>-600.webp).
+ * The large file is 1200px wide, unless its name ends in -w<width> because the source photo was
+ * smaller (tools/optimise-images.mjs never enlarges photos), e.g. rolex-datejust-01-1-w640.webp. */
 function productImageSet(src) {
   const small = src.replace(/\.webp$/, '-600.webp');
-  return { src, srcset: `${small} 600w, ${src} 1200w` };
+  const capped = src.match(/-w(\d{3,4})\.webp$/);
+  return { src, srcset: `${small} 600w, ${src} ${capped ? capped[1] : 1200}w` };
 }
 
 function instagramUrlOf(product) {

@@ -3,7 +3,7 @@
 
 (() => {
   const { el } = ZW;
-  const CFG = STORE_CONFIG;
+  const CFG = ZW.CFG; // includes demo samples while demo mode is on
 
   /** COD advance rule in words, or null when the owner has not decided it yet. */
   function advanceSentence() {
@@ -32,7 +32,7 @@
     const outside = ZW.deliveryCharge('outside');
     faqCharges.replaceChildren(
       inside !== null && outside !== null
-        ? `${formatBDT(inside)} inside Dhaka and ${formatBDT(outside)} outside Dhaka.`
+        ? el('span', {}, [`${formatBDT(inside)} inside Dhaka and ${formatBDT(outside)} outside Dhaka.`, ...(ZW.isDemoDelivery('inside') || ZW.isDemoDelivery('outside') ? [' ', ZW.sampleTag()] : [])])
         : el('span', {}, ['It depends on where you live. ', ZW.askOnWhatsApp('Hi ZENRO Wrist & Co., what is the delivery charge to my area?')])
     );
   }

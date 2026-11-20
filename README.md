@@ -35,6 +35,7 @@ The site is plain **HTML, CSS and JavaScript**: no framework, no build step. It 
 ├── css/styles.css              all styles (mobile-first)
 ├── js/
 │   ├── config.js               ← YOUR SETTINGS: delivery charges, payment numbers, policies, reviews
+│   ├── demo-data.js            sample prices and payment details for demo mode (see "Demo mode")
 │   ├── products.js             ← YOUR CATALOGUE: brands, models, watches
 │   ├── main.js                 shared: menus, cart, product cards, helpers
 │   ├── bd-locations.js         the 64 districts of Bangladesh
@@ -118,9 +119,25 @@ Slugs and ids may only contain lowercase letters, numbers and hyphens, because t
    - **removes all EXIF and GPS location data**
    - crops it to 4:5 (use `node tools/optimise-images.mjs --contain` to pad instead of crop)
    - saves a 1200 px and a 600 px WebP in `images/products/<brand>/<model>/`
+   - never enlarges a small photo: a 640 px source gives a 640 px large file named `...-w640.webp` (the site reads the width from the name)
 4. The tool prints lines like `images: ['images/products/rolex/datejust/rolex-datejust-01-1.webp', ...]`. Paste each one into its product in `js/products.js`.
 
 Until a watch has photos, it shows a dark "ZENRO" card with its name. The originals in `images/raw/` are listed in `.gitignore`, so they are never uploaded.
+
+## Demo mode (client previews)
+
+`demoMode: true` in `js/config.js` turns on sample data from `js/demo-data.js`, so the whole shop can be clicked through before the real prices and payment numbers are known. Nothing fake is written into `config.js` or `products.js`: the samples only fill settings that are still `TODO_OWNER`, and a real value always wins.
+
+While demo mode is on:
+
+- every page shows a gold "Demo preview. Prices and payment details are samples. Please do not send money." banner
+- sample prices (and sample delivery charges) carry a **Sample** tag, and products without a condition show "Sample listing"
+- payment panels show `01XXXXXXXXX` (bank: "Demo Bank Ltd", `0000000000000`) with "Demo number. Do not send money." and no Copy button
+- order IDs start with `ZW-DEMO-` and the WhatsApp message starts with "DEMO ORDER (not real, no payment made)"
+- product pages carry no price in their search-engine data (JSON-LD)
+- **`npm run stamp` adds `<meta name="robots" content="noindex">` to every page, so search engines do not index the sample prices**
+
+**Before launch:** set `demoMode: false` in `js/config.js`, run `npm run stamp` (this removes the noindex tags again), run `npm test`, then commit and push. With `demoMode: false`, `js/demo-data.js` has no effect at all.
 
 ## Filling in `js/config.js`
 

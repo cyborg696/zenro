@@ -17,7 +17,7 @@
 
   const { el, svgIcon, ICONS } = ZW;
   const O = ZWOrder;
-  const CFG = STORE_CONFIG;
+  const CFG = ZW.CFG;
   const SENT_KEY = 'zw-order-sent';
   const WEBHOOK_KEY = 'zw-webhook-sent';
 
@@ -87,15 +87,16 @@
   const p = order.payment;
   const due = O.amountDue(p.method, order.zone, order.items);
 
+  // A row value is text, or text plus the demo "Sample" tag (see ZW.amount).
   const dl = (rows) => el('dl', { class: 'info-list info-list--compact' },
-    rows.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
+    rows.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', { text: k }), el('dd', {}, v)]));
 
   const paymentRows = [
     ['Method', O.METHOD_NAMES[p.method]],
     ['Payment status', O.STATUS_LABELS[order.paymentStatus]],
   ];
-  if (p.method === 'cod' && p.advanceMethod && due) paymentRows.push(['Advance', `${formatBDT(due)} by ${O.METHOD_NAMES[p.advanceMethod]}`]);
-  if (p.method !== 'cod' && due) paymentRows.push(['Amount', formatBDT(due)]);
+  if (p.method === 'cod' && p.advanceMethod && due) paymentRows.push(['Advance', ZW.amount(`${formatBDT(due)} by ${O.METHOD_NAMES[p.advanceMethod]}`, t.demoDelivery)]);
+  if (p.method !== 'cod' && due) paymentRows.push(['Amount', ZW.amount(formatBDT(due), t.demoTotal)]);
   paymentRows.push(['Sender number', p.sender], ['TrxID', p.trxId], ['Depositor', p.depositor], ['Bank reference', p.bankRef]);
 
   root.replaceChildren(
@@ -106,12 +107,12 @@
         el('ul', { class: 'summary__items' }, t.lines.map((l) =>
           el('li', {}, [
             el('span', { text: `${l.product.name}${isSet(l.product.variant) ? ` (${l.product.variant})` : ''} × ${l.qty}` }),
-            el('span', { text: formatBDT(l.total) }),
+            el('span', {}, ZW.amount(formatBDT(l.total), isDemoPrice(l.product))),
           ]))),
         dl([
-          ['Subtotal', formatBDT(t.subtotal)],
-          [`Delivery (${O.ZONES[order.zone]})`, t.delivery === null ? 'Confirmed on WhatsApp' : formatBDT(t.delivery)],
-          ['Total', `${formatBDT(t.total)}${t.delivery === null ? ' + delivery' : ''}`],
+          ['Subtotal', ZW.amount(formatBDT(t.subtotal), t.demoPrices)],
+          [`Delivery (${O.ZONES[order.zone]})`, t.delivery === null ? 'Confirmed on WhatsApp' : ZW.amount(formatBDT(t.delivery), t.demoDelivery)],
+          ['Total', ZW.amount(`${formatBDT(t.total)}${t.delivery === null ? ' + delivery' : ''}`, t.demoTotal)],
         ]),
       ]),
       el('section', { class: 'confirm__card', 'aria-labelledby': 'delivery-heading' }, [

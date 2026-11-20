@@ -42,7 +42,7 @@
   document.title = `${product.name} | ZENRO Wrist & Co.`;
   const metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) {
-    const priceText = price !== null ? `${formatBDT(price)}.` : 'Ask for price on WhatsApp.';
+    const priceText = price !== null && !isDemoPrice(product) ? `${formatBDT(price)}.` : 'Ask for price on WhatsApp.';
     metaDesc.setAttribute('content', `${product.name}. ${priceText} Cash on Delivery all over Bangladesh.`);
   }
 

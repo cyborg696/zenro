@@ -41,16 +41,17 @@
     });
 
     const meta = [ZW.modelLabel(product), isSet(product.variant) ? product.variant : null, `${formatBDT(price)} each`].filter(Boolean).join(' · ');
+    const demo = isDemoPrice(product);
 
     return el('li', { class: 'cart-item', 'data-id': product.id }, [
       el('a', { class: 'cart-item__media', href, tabindex: '-1', 'aria-hidden': 'true' }, ZW.productMedia(product, { sizes: '120px' })),
       el('div', {}, [
         el('h2', { class: 'cart-item__name' }, el('a', { href, text: product.name })),
-        el('p', { class: 'cart-item__meta', text: meta }),
+        el('p', { class: 'cart-item__meta' }, ZW.amount(meta, demo)),
       ]),
       el('div', { class: 'cart-item__controls' }, [
         el('div', { class: 'qty' }, [minus, input, plus]),
-        el('p', { class: 'cart-item__total', text: formatBDT(price * qty) }),
+        el('p', { class: 'cart-item__total' }, ZW.amount(formatBDT(price * qty), demo)),
         remove,
       ]),
     ]);
@@ -59,23 +60,25 @@
   function deliveryText() {
     const inside = ZW.deliveryCharge('inside');
     const outside = ZW.deliveryCharge('outside');
-    if (inside === null || outside === null) return 'Confirmed on WhatsApp';
-    if (inside === outside) return formatBDT(inside);
-    return `${formatBDT(inside)} inside Dhaka, ${formatBDT(outside)} outside`;
+    if (inside === null || outside === null) return ['Confirmed on WhatsApp'];
+    const demo = ZW.isDemoDelivery('inside') || ZW.isDemoDelivery('outside');
+    if (inside === outside) return ZW.amount(formatBDT(inside), demo);
+    return ZW.amount(`${formatBDT(inside)} inside Dhaka, ${formatBDT(outside)} outside`, demo);
   }
 
   function summary(items) {
     const subtotal = Cart.subtotal();
     const count = items.reduce((s, i) => s + i.qty, 0);
+    const demo = items.some((i) => isDemoPrice(getProduct(i.id)));
     return el('aside', { class: 'summary', 'aria-labelledby': 'summary-title' }, [
       el('h2', { id: 'summary-title', text: 'Order summary' }),
       el('dl', {}, [
         el('dt', { text: `Subtotal (${count} ${count === 1 ? 'item' : 'items'})` }),
-        el('dd', { text: formatBDT(subtotal) }),
+        el('dd', {}, ZW.amount(formatBDT(subtotal), demo)),
         el('dt', { text: 'Delivery charge' }),
-        el('dd', { text: deliveryText() }),
+        el('dd', {}, deliveryText()),
         el('dt', { class: 'summary__total', text: 'Total' }),
-        el('dd', { class: 'summary__total', text: `${formatBDT(subtotal)} + delivery` }),
+        el('dd', { class: 'summary__total' }, ZW.amount(`${formatBDT(subtotal)} + delivery`, demo)),
       ]),
       el('p', { class: 'form-note', text: 'The delivery charge depends on your zone and is added at checkout.' }),
       el('a', { class: 'btn btn--gold btn--block', href: 'checkout.html', text: 'Proceed to checkout' }),

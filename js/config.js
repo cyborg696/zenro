@@ -22,6 +22,14 @@ const STORE_CONFIG = (() => {
   };
 
   return deepFreeze({
+    /* ---------- Demo mode ----------
+     * Set to false before launch. Demo mode shows sample prices and demo payment numbers.
+     * The sample values live in js/demo-data.js and only fill settings that are still
+     * 'TODO_OWNER' here (a real value always wins). While it is true every page also shows a
+     * "Demo preview" banner and is hidden from search engines. Run `npm run stamp` after
+     * changing it. */
+    demoMode: true,
+
     /* ---------- Site address ----------
      * The live address of the website, e.g. 'https://zenrowrist.com/' or
      * 'https://<username>.github.io/<repo>/'. Used by tools/stamp.mjs for link previews

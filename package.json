@@ -7,7 +7,8 @@
     "stamp": "node tools/stamp.mjs",
     "images": "node tools/optimise-images.mjs",
     "og-image": "node tools/optimise-images.mjs --og",
-    "generate": "node tools/generate-images.mjs"
+    "generate": "node tools/generate-images.mjs",
+    "test": "node tools/test-demo.mjs"
   },
   "devDependencies": {
     "sharp": "^0.34.0"

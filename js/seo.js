@@ -54,7 +54,8 @@
     if (isSet(product.description)) data.description = product.description;
     const images = productImages(product).map(here);
     if (images.length) data.image = images;
-    if (price !== null) {
+    // No offer for a demo sample price (demo mode): search engines must never see it as real.
+    if (price !== null && !isDemoPrice(product)) {
       data.offers = {
         '@type': 'Offer',
         price: String(price),

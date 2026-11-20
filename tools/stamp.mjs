@@ -11,6 +11,7 @@
  * Run it after you change:
  *  - the header, footer, social links or <head> tags below (titles, descriptions, scripts, CSP)
  *  - siteUrl in js/config.js (used for og:url, og:image, sitemap.xml and robots.txt)
+ *  - demoMode in js/config.js (while it is true every page gets <meta name="robots" content="noindex">)
  *  - brands, models or watches in js/products.js (to update sitemap.xml)
  *
  * To add a new page: create the HTML file with a <main id="main">…</main> block, add an
@@ -45,6 +46,11 @@ const SITE = (() => {
   if (url.protocol !== 'https:') throw new Error('siteUrl in js/config.js must start with https://');
   return url.href.endsWith('/') ? url.href : `${url.href}/`;
 })();
+/* Demo mode (js/demo-data.js): sample prices must never be indexed, so every page gets noindex.
+ * Set demoMode to false in js/config.js and run this script again to restore normal indexing. */
+const DEMO_MODE = STORE_CONFIG.demoMode === true;
+if (DEMO_MODE) console.warn('demoMode is on in js/config.js: every page is stamped with noindex. Set it to false before launch.');
+
 const WA = 'https://wa.me/8801960520872';
 const IG = 'https://www.instagram.com/zenro_wrist_co/';
 const FB = 'https://www.facebook.com/profile.php?id=61594772414204';
@@ -129,7 +135,7 @@ for (const page of PAGES) {
   if (!found) throw new Error(`${page.file}: no <main id="main">…</main> block found`);
   const main = found[0].trimEnd();
   const cur = (key) => (page.current === key ? ' aria-current="page"' : '');
-  const scripts = ['js/config.js', 'js/products.js', 'js/main.js', ...page.scripts]
+  const scripts = ['js/config.js', 'js/demo-data.js', 'js/products.js', 'js/main.js', ...page.scripts]
     .map((s) => `  <script src="${s}" defer></script>`).join('\n');
   const url = SITE + (page.file === 'index.html' ? '' : page.file);
   const html = `<!DOCTYPE html>
@@ -141,7 +147,7 @@ for (const page of PAGES) {
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>${esc(page.title)}</title>
   <meta name="description" content="${esc(page.desc)}">
-${page.noindex ? '  <meta name="robots" content="noindex">\n' : ''}  <meta name="theme-color" content="#0b0b0b">
+${page.noindex || DEMO_MODE ? '  <meta name="robots" content="noindex">\n' : ''}  <meta name="theme-color" content="#0b0b0b">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ZENRO Wrist &amp; Co.">
   <meta property="og:locale" content="en_BD">

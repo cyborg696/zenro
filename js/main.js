@@ -12,7 +12,9 @@
 'use strict';
 
 const ZW = (() => {
-  const CFG = STORE_CONFIG;
+  // Demo mode (js/demo-data.js) fills unset settings with samples; otherwise this is STORE_CONFIG itself.
+  const CFG = typeof DEMO !== 'undefined' ? DEMO.config : STORE_CONFIG;
+  const IS_DEMO = typeof DEMO !== 'undefined' && DEMO.active === true;
   const WA_NUMBER = /^\d{10,15}$/.test(CFG.whatsapp) ? CFG.whatsapp : '';
 
   /* ---------- DOM builder (safe: text is always set via textContent) ---------- */
@@ -159,7 +161,28 @@ const ZW = (() => {
   }
 
   function conditionOf(product) {
-    return isSet(product.condition) && CFG.conditions.includes(product.condition) ? product.condition : null;
+    if (isSet(product.condition) && CFG.conditions.includes(product.condition)) return product.condition;
+    return IS_DEMO ? DEMO.condition(product) : null;
+  }
+
+  /* ---------- Demo mode markers ---------- */
+  /** True when a config value (e.g. 'delivery.insideDhaka', 'payments.bkash') is a demo sample. */
+  function isDemoValue(path) {
+    return IS_DEMO && DEMO.isDemo(path);
+  }
+
+  function isDemoDelivery(zone) {
+    return isDemoValue(zone === 'inside' ? 'delivery.insideDhaka' : 'delivery.outsideDhaka');
+  }
+
+  /** Small "Sample" tag shown next to every price that comes from demo data. */
+  function sampleTag() {
+    return el('span', { class: 'sample-tag', text: IS_DEMO ? DEMO.TAG : 'Sample' });
+  }
+
+  /** Children for an amount: the text, plus the "Sample" tag when `demo` is true. */
+  function amount(text, demo) {
+    return demo ? [text, ' ', sampleTag()] : [text];
   }
 
   function isBuyable(product) {
@@ -347,6 +370,7 @@ const ZW = (() => {
     if (Number.isInteger(product.compareAtPrice) && product.compareAtPrice > price) {
       parts.push(' ', el('s', {}, [el('span', { class: 'visually-hidden', text: 'was ' }), formatBDT(product.compareAtPrice)]));
     }
+    if (isDemoPrice(product)) parts.push(' ', sampleTag());
     return el('p', { class: className }, parts);
   }
 
@@ -391,6 +415,7 @@ const ZW = (() => {
       const wrap = node.dataset.configWrap ? node.closest(node.dataset.configWrap) : node;
       if (value) {
         node.textContent = (node.dataset.configPrefix || '') + value;
+        if (node.dataset.configFormat === 'bdt' && isDemoValue(path)) node.append(' ', sampleTag());
         node.hidden = false;
         if (wrap) wrap.hidden = false;
       } else if (node.dataset.fallback === 'whatsapp') {
@@ -587,6 +612,11 @@ const ZW = (() => {
 
   return {
     CFG,
+    IS_DEMO,
+    isDemoValue,
+    isDemoDelivery,
+    sampleTag,
+    amount,
     ICONS,
     el,
     svgIcon,

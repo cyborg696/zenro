@@ -3274,3 +3274,57 @@ fieldset[aria-invalid="true"] .choice {
   font-size: 1.6rem;
   line-height: 1;
 }
+
+/* ---------- Demo mode (js/demo-data.js, only while demoMode is true in js/config.js) ---------- */
+/* The banner is fixed above the header. --demo-h is its measured height (set by demo-data.js);
+ * --header-h grows by the same amount so every offset below the header still lines up. */
+.is-demo {
+  --header-h: calc(72px + var(--demo-h, 2.75rem)); /* 72px = the header bar itself */
+}
+
+.is-demo .site-header {
+  top: var(--demo-h, 2.75rem);
+  height: 72px;
+}
+
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 170;
+  margin: 0;
+  padding: 0.55rem var(--gutter);
+  background: var(--gold);
+  color: var(--black); /* 9:1 on the gold */
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.sample-tag {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius);
+  background: var(--gold-dark);
+  color: #fff; /* 6:1 on gold-dark */
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.pay-box__demo {
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--danger);
+  background: rgba(163, 39, 27, 0.06);
+  color: var(--danger);
+  font-weight: 600;
+}
