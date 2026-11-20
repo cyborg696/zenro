@@ -10,6 +10,10 @@
  *       evens out the tones, lifts colour slightly, sharpens, and fills the 4:5 frame with a
  *       blurred, darkened copy of the photo plus a soft vignette instead of flat black bars
  *       (implies --contain, so the photo itself is never cropped)
+ *   node tools/optimise-images.mjs --lowkey    premium "low-key" finish: fills the 4:5 frame
+ *       (crops the sides of square photos), deepens contrast and lights the watch with a soft
+ *       spotlight that fades to black. The spotlight position per photo is in
+ *       tools/photo-focus.json (default: centre)
  *   npm run og-image       (or: node tools/optimise-images.mjs --og) builds images/og-image.jpg
  *
  * Put raw photos in images/raw/ named <product-id>-<n>.jpg (or .jpeg / .png), e.g.
@@ -55,7 +59,36 @@ const SIZES = [
 ];
 const args = new Set(process.argv.slice(2));
 const STUDIO = args.has('--studio');
-const FIT = STUDIO || args.has('--contain') ? 'contain' : 'cover';
+const LOWKEY = args.has('--lowkey');
+const FIT = !LOWKEY && (STUDIO || args.has('--contain')) ? 'contain' : 'cover';
+const FOCUS = (() => {
+  try {
+    return JSON.parse(readFileSync(join(ROOT, 'tools', 'photo-focus.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+})();
+
+/** Low-key finish: full-frame photo, more contrast, lit by a soft spotlight that fades to black. */
+async function lowkeyImage(file, width, height) {
+  const name = basename(file, extname(file)).toLowerCase();
+  const f = { x: 0.5, y: 0.5, r: 0.6, ...(FOCUS[name] || {}) };
+  const photo = await sharp(file)
+    .rotate()
+    .resize(width, height, { fit: 'cover', position: 'centre' })
+    .normalise({ lower: 1, upper: 99.5 })
+    .linear(1.18, -18) // deeper blacks
+    .modulate({ saturation: 0.9 })
+    .sharpen({ sigma: 0.8, m1: 0.7, m2: 2.2 })
+    .toBuffer();
+  const light = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><defs>` +
+      `<radialGradient id="g" cx="${f.x}" cy="${f.y}" r="${f.r}"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="0.55" stop-color="#000" stop-opacity="0.15"/><stop offset="1" stop-color="#000" stop-opacity="0.92"/></radialGradient>` +
+      `<linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.35"/><stop offset="0.35" stop-color="#000" stop-opacity="0"/></linearGradient>` +
+      `</defs><rect width="100%" height="100%" fill="url(#g)"/><rect width="100%" height="100%" fill="url(#t)"/></svg>`
+  );
+  return sharp(photo).composite([{ input: light }]);
+}
 const BACKGROUND = '#0b0b0b';
 
 /** Studio finish: corrected photo, centred on a blurred dark copy of itself, with a vignette. */
@@ -146,10 +179,12 @@ for (const file of files) {
       width = Math.floor(width / grow / 4) * 4;
       height = (width / 4) * 5;
       if (size.suffix === '') largeName = `${id}-${n}-w${width}`;
-      else console.warn(`  ${relative(ROOT, file)} is small: its ${size.suffix} file is only ${width} px wide`);
+      else continue; // the large file is already 600 px or less: no separate small file (see productImageSet)
     }
     const dest = join(folder, `${largeName}${size.suffix}.webp`);
-    const base = STUDIO
+    const base = LOWKEY
+      ? await lowkeyImage(file, width, height)
+      : STUDIO
       ? await studioImage(file, width, height)
       : sharp(file)
         .rotate() // apply the camera orientation before the metadata is dropped

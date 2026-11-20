@@ -1,0 +1,7 @@
+{
+  "_help": "Spotlight position for `node tools/optimise-images.mjs --lowkey`, per raw photo name (without extension). x and y are fractions of the 4:5 frame (0.5 = centre), r is the size of the pool of light. Photos not listed get { x: 0.5, y: 0.5, r: 0.6 }.",
+  "jacob-and-co-godfather-01-1": { "x": 0.42, "y": 0.5, "r": 0.62 },
+  "patek-philippe-grand-complications-01-1": { "x": 0.45, "y": 0.8, "r": 0.55 },
+  "rolex-datejust-collection-1": { "x": 0.5, "y": 0.6, "r": 0.62 },
+  "rolex-day-date-stone-01-1": { "x": 0.5, "y": 0.68, "r": 0.5 }
+}

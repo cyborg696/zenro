@@ -72,7 +72,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: false,
     condition: 'TODO_OWNER',
-    images: ['images/products/rolex/datejust/rolex-datejust-collection-1-w640.webp'],
+    images: ['images/products/rolex/datejust/rolex-datejust-collection-1-w512.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/Dfjmsn1h0DN/',
     description: 'The Datejust in a range of dial colours. Ask us on WhatsApp which colours are available.',
     specs: { ...NO_SPECS },
@@ -88,7 +88,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: false,
     condition: 'TODO_OWNER',
-    images: ['images/products/rolex/day-date/rolex-day-date-stone-01-1-w640.webp'],
+    images: ['images/products/rolex/day-date/rolex-day-date-stone-01-1-w512.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/Dfj4a8kmueR/',
     description: 'The Day-Date in a stone-set edition.',
     specs: { ...NO_SPECS },
@@ -136,7 +136,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: true,
     condition: 'TODO_OWNER',
-    images: ['images/products/patek-philippe/grand-complications/patek-philippe-grand-complications-01-1-w640.webp'],
+    images: ['images/products/patek-philippe/grand-complications/patek-philippe-grand-complications-01-1-w512.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/DfeP9FeGtnO/',
     description:
       'A black guilloché dial with rose gold markers, a 24-hour day/night subdial, a small seconds subdial and two open-heart apertures. The rose gold finished case has a Clous de Paris bezel and sits on a black croc-embossed leather strap with contrast stitching.',
@@ -174,7 +174,7 @@ const PRODUCTS = Object.freeze([
     inStock: true,
     featured: true,
     condition: 'TODO_OWNER',
-    images: ['images/products/jacob-and-co/godfather/jacob-and-co-godfather-01-1-w640.webp'],
+    images: ['images/products/jacob-and-co/godfather/jacob-and-co-godfather-01-1-w512.webp'],
     instagramUrl: 'https://www.instagram.com/zenro_wrist_co/p/DfmsaP_mvai/',
     description: 'The Godfather in an all-black theme.',
     specs: { ...NO_SPECS },
@@ -274,11 +274,14 @@ function productImages(product) {
 
 /** src + srcset for one product photo (the 600px file sits next to the large one as <name>-600.webp).
  * The large file is 1200px wide, unless its name ends in -w<width> because the source photo was
- * smaller (tools/optimise-images.mjs never enlarges photos), e.g. rolex-datejust-01-1-w640.webp. */
+ * smaller (tools/optimise-images.mjs never enlarges photos), e.g. rolex-datejust-01-1-w512.webp.
+ * A large file of 600px or less has no separate -600 file. */
 function productImageSet(src) {
-  const small = src.replace(/\.webp$/, '-600.webp');
   const capped = src.match(/-w(\d{3,4})\.webp$/);
-  return { src, srcset: `${small} 600w, ${src} ${capped ? capped[1] : 1200}w` };
+  const width = capped ? Number(capped[1]) : 1200;
+  if (width <= 600) return { src, srcset: `${src} ${width}w` };
+  const small = src.replace(/\.webp$/, '-600.webp');
+  return { src, srcset: `${small} 600w, ${src} ${width}w` };
 }
 
 function instagramUrlOf(product) {

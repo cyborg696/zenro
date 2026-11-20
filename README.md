@@ -117,7 +117,7 @@ Slugs and ids may only contain lowercase letters, numbers and hyphens, because t
    For every photo, the tool:
    - turns it the right way up
    - **removes all EXIF and GPS location data**
-   - crops it to 4:5 (use `node tools/optimise-images.mjs --contain` to pad instead of crop, or `--studio` for phone / Instagram photos: tone and colour correction, sharpening, and a blurred dark backdrop instead of black bars)
+   - crops it to 4:5 (use `node tools/optimise-images.mjs --contain` to pad instead of crop, or `--studio` for phone / Instagram photos: tone and colour correction, sharpening, and a blurred dark backdrop instead of black bars; or `--lowkey` for a premium dark spotlight look, positions in `tools/photo-focus.json`)
    - saves a 1200 px and a 600 px WebP in `images/products/<brand>/<model>/`
    - never enlarges a small photo: a 640 px source gives a 640 px large file named `...-w640.webp` (the site reads the width from the name)
 4. The tool prints lines like `images: ['images/products/rolex/datejust/rolex-datejust-01-1.webp', ...]`. Paste each one into its product in `js/products.js`.
