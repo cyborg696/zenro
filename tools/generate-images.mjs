@@ -408,8 +408,19 @@ function watch(p, cx, cy, R, yMin, yMax) {
   return { defs: watchDefs(p, cx, cy, r), body };
 }
 
-/* ---------- the one generic watch used in the hero ---------- */
+/* ---------- the one generic watch used in the hero ----------
+ * Rose-gold dress watch: ivory guilloché dial, Roman numerals, dauphine hands, brown leather.
+ * No date window, because it would sit on top of the "III". */
 const HERO_WATCH = {
+  type: 'dress', metal: 'rose', dial: ['#fdf8ef', '#e4d8c4'], texture: 'guilloche', plain: true,
+  indices: 'roman', hands: 'dauphine', ink: '#3b2a20', accent: '#9a5638', date: false,
+  handColors: ['#f0b89b', '#7c412b'], halo: '#d9a08a',
+  strap: { kind: 'leather', color: ['#6e4429', '#3a2214'], stitch: '#efe2c8' },
+};
+
+/* The sharing image keeps the earlier gold-and-black watch so link previews still match
+ * images/og-image.jpg. Point ogImageSvg() at HERO_WATCH and rebuild the JPG to change it. */
+const OG_WATCH = {
   type: 'dress', metal: 'gold', dial: ['#2a2723', '#050505'], texture: 'sunburst', plain: true,
   indices: 'baton', hands: 'dauphine', ink: '#e9d9a8', accent: '#d8b86e', date: true,
   strap: { kind: 'alligator', color: ['#2b2b2b', '#0b0b0b'], stitch: '#c9a961' },
@@ -427,7 +438,7 @@ function heroSvg({ live = false } = {}) {
     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" class="hero__watch" role="img" aria-label="Watch showing the current time in Bangladesh">`
     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img">`;
   return `${open}
-<defs>${w.defs}<radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#c9a961" stop-opacity="0.35"/><stop offset="1" stop-color="#c9a961" stop-opacity="0"/></radialGradient></defs>
+<defs>${w.defs}<radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="${p.halo}" stop-opacity="0.35"/><stop offset="1" stop-color="${p.halo}" stop-opacity="0"/></radialGradient></defs>
 <circle cx="${cx}" cy="${cy}" r="560" fill="url(#halo)"/>
 <g transform="rotate(-16 ${cx} ${cy})">${w.body}</g>
 </svg>
@@ -444,7 +455,7 @@ function faviconSvg() {
 }
 
 function ogImageSvg() {
-  const p = HERO_WATCH;
+  const p = OG_WATCH;
   const w = watch(p, 900, 315, 205, -400, 1100);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
 <defs>${w.defs}<radialGradient id="bgOg" cx="0.75" cy="0.4" r="0.8"><stop offset="0" stop-color="#2a261f"/><stop offset="1" stop-color="#050505"/></radialGradient></defs>
