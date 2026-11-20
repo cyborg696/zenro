@@ -4,4 +4,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://TODO_OWNER.github.io/zenro/sitemap.xml
+Sitemap: https://cyborg696.github.io/zenro/sitemap.xml
