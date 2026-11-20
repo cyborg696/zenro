@@ -4,6 +4,42 @@
 (() => {
   const { el } = ZW;
 
+  /* ---------- Hero watch: live Bangladesh time ----------
+   * Bangladesh Standard Time is UTC+6 all year (no daylight saving), so the time is worked out
+   * from UTC directly and does not depend on the visitor's own time zone. The second hand sweeps
+   * smoothly; with "reduce motion" switched on it ticks once a second instead. */
+  const watchHands = ['hour', 'minute', 'second'].map((k) => document.getElementById(`hw-${k}`));
+  if (watchHands.every(Boolean)) {
+    const BST_OFFSET_MS = 6 * 60 * 60 * 1000;
+    // Keep each hand's translate(...) and replace only its rotate(...)
+    const bases = watchHands.map((g) => g.getAttribute('transform').replace(/\s*rotate\([^)]*\)/, ''));
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const render = () => {
+      const t = new Date(Date.now() + BST_OFFSET_MS);
+      const sec = t.getUTCSeconds() + (reduceMotion.matches ? 0 : t.getUTCMilliseconds() / 1000);
+      const min = t.getUTCMinutes() + sec / 60;
+      const hour = (t.getUTCHours() % 12) + min / 60;
+      [hour * 30, min * 6, sec * 6].forEach((deg, i) => {
+        watchHands[i].setAttribute('transform', `${bases[i]} rotate(${deg.toFixed(2)})`);
+      });
+    };
+
+    // Smooth sweep only while the hero is on screen; otherwise once a second is plenty.
+    let onScreen = true;
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => {
+        onScreen = entry.isIntersecting;
+      }).observe(watchHands[0].ownerSVGElement);
+    }
+    const loop = () => {
+      render();
+      if (onScreen && !reduceMotion.matches) requestAnimationFrame(loop);
+      else setTimeout(loop, 1000 - (Date.now() % 1000));
+    };
+    loop();
+  }
+
   /* ---------- Featured watches ---------- */
   const grid = document.getElementById('featured-grid');
   if (grid) {

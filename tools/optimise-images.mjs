@@ -6,6 +6,10 @@
  *   npm install            (once, installs sharp)
  *   npm run images         (or: node tools/optimise-images.mjs)
  *   node tools/optimise-images.mjs --contain   pad photos to 4:5 instead of cropping
+ *   node tools/optimise-images.mjs --studio    "studio" finish for phone / Instagram photos:
+ *       evens out the tones, lifts colour slightly, sharpens, and fills the 4:5 frame with a
+ *       blurred, darkened copy of the photo plus a soft vignette instead of flat black bars
+ *       (implies --contain, so the photo itself is never cropped)
  *   npm run og-image       (or: node tools/optimise-images.mjs --og) builds images/og-image.jpg
  *
  * Put raw photos in images/raw/ named <product-id>-<n>.jpg (or .jpeg / .png), e.g.
@@ -50,8 +54,30 @@ const SIZES = [
   { width: 600, height: 750, suffix: '-600' },
 ];
 const args = new Set(process.argv.slice(2));
-const FIT = args.has('--contain') ? 'contain' : 'cover';
+const STUDIO = args.has('--studio');
+const FIT = STUDIO || args.has('--contain') ? 'contain' : 'cover';
 const BACKGROUND = '#0b0b0b';
+
+/** Studio finish: corrected photo, centred on a blurred dark copy of itself, with a vignette. */
+async function studioImage(file, width, height) {
+  const photo = await sharp(file)
+    .rotate()
+    .normalise({ lower: 1, upper: 99 }) // stretch the tones without clipping highlights
+    .modulate({ saturation: 1.08 })
+    .resize(width, height, { fit: 'inside' })
+    .sharpen({ sigma: 0.7, m1: 0.6, m2: 2 })
+    .toBuffer();
+  const backdrop = await sharp(file)
+    .rotate()
+    .resize(width, height, { fit: 'cover' })
+    .blur(Math.max(10, width / 24))
+    .modulate({ brightness: 0.4, saturation: 0.7 })
+    .toBuffer();
+  const vignette = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><defs><radialGradient id="v" cx="50%" cy="46%" r="72%"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.5"/></radialGradient></defs><rect width="100%" height="100%" fill="url(#v)"/></svg>`
+  );
+  return sharp(backdrop).composite([{ input: photo, gravity: 'centre' }, { input: vignette }]);
+}
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /* ---------- Open Graph image ---------- */
@@ -123,9 +149,12 @@ for (const file of files) {
       else console.warn(`  ${relative(ROOT, file)} is small: its ${size.suffix} file is only ${width} px wide`);
     }
     const dest = join(folder, `${largeName}${size.suffix}.webp`);
-    await sharp(file)
-      .rotate() // apply the camera orientation before the metadata is dropped
-      .resize(width, height, { fit: FIT, position: 'centre', background: BACKGROUND })
+    const base = STUDIO
+      ? await studioImage(file, width, height)
+      : sharp(file)
+        .rotate() // apply the camera orientation before the metadata is dropped
+        .resize(width, height, { fit: FIT, position: 'centre', background: BACKGROUND });
+    await base
       .flatten({ background: BACKGROUND })
       .webp({ quality: 80, effort: 5 })
       .toFile(dest); // sharp writes no EXIF/GPS/ICC metadata unless asked to

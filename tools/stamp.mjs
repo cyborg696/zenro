@@ -94,7 +94,7 @@ const social = (cls) => `<ul class="${cls}" aria-label="ZENRO on social media">
 const PAGES = [
   { file: 'index.html', current: 'home', title: 'ZENRO Wrist & Co. | Watches with Cash on Delivery all over Bangladesh',
     desc: 'ZENRO Wrist & Co. sells watches online from Chandpur, Bangladesh. Cash on Delivery all over Bangladesh, bKash, Nagad, Rocket or bank transfer, and easy ordering on WhatsApp.',
-    scripts: ['js/seo.js', 'js/home.js'], preload: 'images/hero-watch.svg' },
+    scripts: ['js/seo.js', 'js/home.js'] }, // the hero watch is inline (see tools/generate-images.mjs)
   { file: 'shop.html', current: 'shop', title: 'The Collection | ZENRO Wrist & Co.',
     desc: 'Browse watches by brand and model at ZENRO Wrist & Co. Prices in Taka, Cash on Delivery all over Bangladesh.',
     scripts: ['js/shop.js'] },
