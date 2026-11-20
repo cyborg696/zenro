@@ -26,7 +26,7 @@ const STORE_CONFIG = (() => {
      * The live address of the website, e.g. 'https://zenrowrist.com/' or
      * 'https://<username>.github.io/<repo>/'. Used by tools/stamp.mjs for link previews
      * (og:url, og:image), sitemap.xml and robots.txt. Run `npm run stamp` after changing it. */
-    siteUrl: 'TODO_OWNER',
+    siteUrl: 'https://cyborg696.github.io/zenro/',
 
     /* ---------- Contact (confirmed facts) ---------- */
     whatsapp: '8801960520872', // international format, digits only (used for https://wa.me/...)
